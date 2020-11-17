@@ -1,0 +1,71 @@
+#include "MKL25Z4.h"                    
+#include "led.h"
+#include "RTE_Components.h"
+#include  CMSIS_device_header
+#include "cmsis_os2.h"
+
+const int LEDSequence[8] = {GREEN_LED_1, GREEN_LED_2, GREEN_LED_3, GREEN_LED_4, GREEN_LED_5, GREEN_LED_6, GREEN_LED_7, GREEN_LED_8};
+
+void initGPIO(void) { 
+	SIM->SCGC5 |= (SIM_SCGC5_PORTC_MASK) ; 
+
+	PORTC->PCR[RED_LED] &= ~PORT_PCR_MUX_MASK;
+	PORTC->PCR[RED_LED] |= PORT_PCR_MUX(1);  
+	PORTC->PCR[GREEN_LED_1] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_1] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_2] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_2] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_3] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_3] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_4] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_4] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_5] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_5] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_6] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_6] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_7] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_7] |= PORT_PCR_MUX(1); 
+	PORTC->PCR[GREEN_LED_8] &= ~PORT_PCR_MUX_MASK; 
+	PORTC->PCR[GREEN_LED_8] |= PORT_PCR_MUX(1); 
+
+	//Se LED pins to output
+	PTC->PDDR |= MASK(RED_LED);
+	PTC->PDDR |= MASK(GREEN_LED_1);
+	PTC->PDDR |= MASK(GREEN_LED_2);
+	PTC->PDDR |= MASK(GREEN_LED_3);
+	PTC->PDDR |= MASK(GREEN_LED_4);
+	PTC->PDDR |= MASK(GREEN_LED_5);
+	PTC->PDDR |= MASK(GREEN_LED_6);
+	PTC->PDDR |= MASK(GREEN_LED_7);
+	PTC->PDDR |= MASK(GREEN_LED_8);
+
+}
+
+void blinkGreenLedTwice() {
+	for(int i = 0; i<2; i++) {	
+		PTC->PCOR |= MASK_ALL_GREEN;
+		osDelay(BLINK_CONNECTION);
+		PTC->PSOR |= MASK_ALL_GREEN;
+		osDelay(BLINK_CONNECTION);
+	}
+}
+
+void ledControlStopMode() {
+	//Stop
+	PTC->PTOR |= MASK_RED_LED;
+	PTC->PDOR |= MASK_ALL_GREEN;
+	osDelay(LED_DELAY_STATIONERY);
+}
+
+volatile uint8_t led_count = 0;
+void ledControlMovingMode() {
+	//Moving
+	PTC->PDOR &= ~MASK_ALL_GREEN;
+	PTC->PTOR |= MASK_RED_LED;
+	PTC->PDOR |= MASK(LEDSequence[led_count++]);
+	osDelay(LED_DELAY_MOVING);
+	if (led_count >= (NUM_OF_GREEN_LEDS - 1)) {
+		led_count = 0;
+	}
+}
+
