@@ -14,11 +14,6 @@
 volatile unsigned char rxData = 0x0;
 volatile uint8_t dir = STOP;
 
-//Prioritity of tPlayEndSong
-const osThreadAttr_t thread_attr = {
-	.priority = osPriorityAboveNormal
-};
-
 osEventFlagsId_t start_flag;
 osEventFlagsId_t end_race_flag;
 
