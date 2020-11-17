@@ -17,6 +17,13 @@ volatile uint8_t dir = STOP;
 osEventFlagsId_t start_flag;
 osEventFlagsId_t end_race_flag;
 
+osMutexId_t audioMutex;
+
+//Prioritity of tPlayEndSong
+const osThreadAttr_t thread_attr = {
+    .priority = osPriorityAboveNormal
+};
+
 void UART2_IRQHandler(void) {
 	NVIC_ClearPendingIRQ(UART2_IRQn);
 	
@@ -69,11 +76,13 @@ void tAudio(void *argument){
 	playConnectSong();
 	for (;;) {
 		for(int i=0; i < RUNNING_SONG_LENGTH; i++){
+			osMutexAcquire(audioMutex, osWaitForever);
 			if(osEventFlagsGet(end_race_flag) == 0x0001) {
-				osDelay(INT_MAX);
+				osMutexRelease(audioMutex);
 			}
 			playNote(travellingNotes[i][0]);
 			osDelay(travellingNotes[i][1]);
+			osMutexRelease(audioMutex);
 		}
 	}
 }
@@ -83,6 +92,7 @@ void tPlayEndSong(void *argument) {
 	for(;;) {
 		osEventFlagsWait(end_race_flag, 0x0001, osFlagsWaitAny, osWaitForever);
 		osEventFlagsClear(end_race_flag, 0x0001);
+		osMutexAcquire(audioMutex, osWaitForever);
 		playEndSong();
 		SIM->SCGC6 &= ~SIM_SCGC6_TPM1_MASK;
 		SIM->SOPT2 &= ~SIM_SOPT2_TPMSRC_MASK;
@@ -98,6 +108,7 @@ int main (void) {
 	initMotor();
 
   osKernelInitialize();                 // Initialize CMSIS-RTOS        
+	audioMutex = osMutexNew(NULL);
 
 	start_flag = osEventFlagsNew(NULL);
 	end_race_flag = osEventFlagsNew(NULL);
@@ -106,7 +117,7 @@ int main (void) {
   osThreadNew(tMotorControl, NULL, NULL); 	 
 	osThreadNew(tLED, NULL, NULL);										
 	osThreadNew(tAudio, NULL, NULL);									
-	osThreadNew(tPlayEndSong, NULL, NULL);	
+	osThreadNew(tPlayEndSong, NULL, &thread_attr);	
 	osKernelStart();                      						
   
 	for (;;) {
