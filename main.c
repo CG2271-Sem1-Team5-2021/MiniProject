@@ -18,10 +18,15 @@ osEventFlagsId_t start_flag;
 osEventFlagsId_t end_race_flag;
 
 osMutexId_t audioMutex;
+osSemaphoreId_t dataSemaphore;
 
 //Prioritity of tPlayEndSong
-const osThreadAttr_t thread_attr = {
+const osThreadAttr_t above_normal_attr = {
     .priority = osPriorityAboveNormal
+};
+
+const osThreadAttr_t high_priority_attr = {
+		.priority = osPriorityHigh
 };
 
 void UART2_IRQHandler(void) {
@@ -31,12 +36,14 @@ void UART2_IRQHandler(void) {
 	}	
 	if(UART2->S1 & UART_S1_RDRF_MASK) {
 		rxData = UART2->D;
+		osSemaphoreRelease(dataSemaphore);
 	}
 }
 
 //Decode the data from Serial Port and perfrom the necessary action
 void tBrain (void *argument) {
 	for(;;) {
+		osSemaphoreAcquire(dataSemaphore, osWaitForever);
 		if (rxData == INITIALIZE_PACKET) {
 			osEventFlagsSet(start_flag, 0x0001);
 		} else if (rxData == END_PACKET) {
@@ -109,15 +116,15 @@ int main (void) {
 
   osKernelInitialize();                 // Initialize CMSIS-RTOS        
 	audioMutex = osMutexNew(NULL);
-
+	dataSemaphore = osSemaphoreNew(1,0, NULL);
 	start_flag = osEventFlagsNew(NULL);
 	end_race_flag = osEventFlagsNew(NULL);
 
-	osThreadNew(tBrain, NULL, NULL); 	
+	osThreadNew(tBrain, NULL, &above_normal_attr); 	
   osThreadNew(tMotorControl, NULL, NULL); 	 
 	osThreadNew(tLED, NULL, NULL);										
 	osThreadNew(tAudio, NULL, NULL);									
-	osThreadNew(tPlayEndSong, NULL, &thread_attr);	
+	osThreadNew(tPlayEndSong, NULL, &high_priority_attr);	
 	osKernelStart();                      						
   
 	for (;;) {
