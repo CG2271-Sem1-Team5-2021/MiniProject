@@ -57,15 +57,15 @@ void ledControlStopMode() {
 	osDelay(LED_DELAY_STATIONERY);
 }
 
-volatile uint8_t led_count = 0;
+volatile uint8_t led_counter = 0;
 void ledControlMovingMode() {
 	//Moving
 	PTC->PDOR &= ~MASK_ALL_GREEN;
 	PTC->PTOR |= MASK_RED_LED;
-	PTC->PDOR |= MASK(LEDSequence[led_count++]);
+	PTC->PDOR |= MASK(LEDSequence[led_counter++]);
 	osDelay(LED_DELAY_MOVING);
-	if (led_count >= (NUM_OF_GREEN_LEDS - 1)) {
-		led_count = 0;
+	if (led_counter >= (NUM_OF_GREEN_LEDS)) {
+		led_counter = 0;
 	}
 }
 
